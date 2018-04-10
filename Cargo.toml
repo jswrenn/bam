@@ -1,0 +1,13 @@
+[package]
+name = "bam"
+version = "0.1.0"
+authors = ["Jack Wrenn <me@jswrenn.com>"]
+description = "Beep, as an ALSA MIDI device."
+license = "MIT"
+repository = "https://github.com/jswrenn/bam"
+
+[dependencies]
+beep = "0.2"
+midir = "0.5"
+pitch_calc = "0.11"
+dimensioned = "0.6"
