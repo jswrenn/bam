@@ -14,7 +14,7 @@ use wmidi::MidiMessage::{self, *};
 
 fn run() -> Result<(), Box<Error>> {
   // silence the PC speaker
-  beep(0. * si::HZ)
+  beep(0. * si::HZ);
 
   // create a midi input port
   let mut input = MidiInput::new(env!("CARGO_PKG_NAME"))?;
