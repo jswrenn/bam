@@ -1,45 +1,43 @@
-extern crate beep;
-extern crate midir;
-extern crate wmidi;
-extern crate pitch_calc;
-extern crate dimensioned;
-
 use beep::beep;
-use dimensioned::si;
-use pitch_calc::Step;
-use std::error::Error;
-use midir::{MidiInput, Ignore};
 use midir::os::unix::VirtualInput;
-use wmidi::MidiMessage::{self, *};
+use midir::{Ignore, MidiInput};
+use std::error::Error;
+use std::convert::TryInto;
+use wmidi::{
+    ControlFunction,
+    MidiMessage::*,
+};
 
-fn run() -> Result<(), Box<Error>> {
-  // silence the PC speaker
-  beep(0. * si::HZ);
+fn main() -> Result<(), Box<dyn Error>> {
+    // silence the PC speaker
+    beep(0)?;
 
-  // create a midi input port
-  let mut input = MidiInput::new(env!("CARGO_PKG_NAME"))?;
+    // create a midi input port
+    let mut input = MidiInput::new(env!("CARGO_PKG_NAME"))?;
 
-  // ignore all fancy events
-  input.ignore(Ignore::All);
+    // ignore all fancy events
+    input.ignore(Ignore::All);
 
-  // create a virtual midi port
-  let _port = input.create_virtual("pcspkr",
-    |_, message, _| {
-      match MidiMessage::from_bytes(message) {
-        Ok(NoteOn(_, note, _))
-          => beep(Step(note as f32).hz() as f64 * si::HZ),
-        Ok(NoteOff(_, _, _)) | Ok(ControlChange(_, 123, 0))
-          => beep(0. * si::HZ),
-        _ => {}}}, ())?;
+    // create a virtual midi port
+    input.create_virtual(
+        "pcspkr",
+        |_, message, _|
+          match message.try_into() {
+              // note on, beep
+              Ok(NoteOn(_, note, _)) =>
+                  beep(note.to_freq_f32() as u16).unwrap(),
+              // (all) note(s) off, beep 0hz
+              Ok(NoteOff(_, _, _)) |
+              Ok(ControlChange(_, ControlFunction::ALL_NOTES_OFF, _)) =>
+                  beep(0).unwrap(),
+              // ignore other events
+              _ => {},
+          },
+        (),
+    )?;
 
-  // keep the port open
-  loop {std::thread::park()}
-}
-
-fn main() {
-  // run and, if necessary, print error message to stderr
-  if let Err(error) = run() {
-    eprintln!("Error: {}", error);
-    std::process::exit(1);
-  }
+    // keep the port open
+    loop {
+        std::thread::yield_now()
+    }
 }
